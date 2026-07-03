@@ -49,7 +49,7 @@ android {
 
     compileSdk = 33
     buildToolsVersion = "33.0.1"
-    ndkVersion = "25.0.8775105"
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "me.teble.xposed.autodaily"
