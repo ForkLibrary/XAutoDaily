@@ -2,12 +2,14 @@ package me.teble.xposed.autodaily.hook.function.impl
 
 import me.teble.xposed.autodaily.hook.base.hostClassLoader
 import me.teble.xposed.autodaily.hook.base.hostVersionCode
+import me.teble.xposed.autodaily.hook.base.load
 import me.teble.xposed.autodaily.hook.base.loadAs
 import me.teble.xposed.autodaily.hook.function.base.BaseFunction
 import me.teble.xposed.autodaily.hook.utils.QApplicationUtil
 import me.teble.xposed.autodaily.utils.LogUtil
 import me.teble.xposed.autodaily.utils.getFields
 import me.teble.xposed.autodaily.utils.getMethods
+import mqq.app.api.IRuntimeService
 import mqq.manager.TicketManager
 import java.lang.reflect.Proxy
 import java.util.concurrent.CountDownLatch
@@ -63,11 +65,15 @@ open class TicketManager : BaseFunction(
             thirdSigService = QApplicationUtil.appRuntime
                 .getRuntimeService(loadAs("com.tencent.mobileqq.thirdsig.api.IThirdSigService"), "all")
         }
-        if (hostVersionCode > newPskeyVersion) {
+        runCatching {
+            val psKeyManagerCls = load("com.tencent.mobileqq.pskey.api.IPskeyManager") ?: return
             pskeyManager = QApplicationUtil.appRuntime
-                .getRuntimeService(loadAs("com.tencent.mobileqq.pskey.api.IPskeyManager"), "all")
+                .getRuntimeService(psKeyManagerCls as Class<IRuntimeService>, "all")
+        }.onFailure {
+            LogUtil.w("pskeyManager get fail")
         }
     }
+
 
     private fun getTicketManager(): TicketManager {
         if (ticketManagerMap.containsKey(uin)) {
@@ -115,9 +121,9 @@ open class TicketManager : BaseFunction(
                 getSuperKeyMethod.invoke(service, QApplicationUtil.currentUin, 16, callback)
 
                 countDownLatch.await(15000L, TimeUnit.MILLISECONDS)
-            } catch (_: InterruptedException) {
+            } catch (_: Throwable) {
             }
-            return superKey
+            superKey?.let { return it }
         }
         return getTicketManager().getSuperkey(uin)
     }
@@ -154,9 +160,9 @@ open class TicketManager : BaseFunction(
                 getPskeyMethod.invoke(manager, arrayOf(domain), callback)
 
                 countDownLatch.await(15000L, TimeUnit.MILLISECONDS)
-            } catch (_: InterruptedException) {
+            } catch (_: Throwable) {
             }
-            return psKey
+            psKey?.let { return it }
         }
         return getTicketManager().getPskey(uin, domain)
     }
